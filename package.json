@@ -14,9 +14,11 @@
     "test:phase6": "node scripts/test-phase6-suite.mjs",
     "test:phase7": "node scripts/test-phase7-suite.mjs",
     "test:phase8": "node scripts/test-phase8-redline-suite.mjs",
-    "test:all": "node scripts/test-phase3-suite.mjs && node scripts/test-phase4-suite.mjs && node scripts/test-phase5-suite.mjs && node scripts/test-phase6-suite.mjs && node scripts/test-phase7-suite.mjs && node scripts/test-phase8-redline-suite.mjs"
+    "test:cloudinary": "node scripts/test-cloudinary-storage-suite.mjs",
+    "test:all": "node scripts/test-phase3-suite.mjs && node scripts/test-phase4-suite.mjs && node scripts/test-phase5-suite.mjs && node scripts/test-phase6-suite.mjs && node scripts/test-phase7-suite.mjs && node scripts/test-phase8-redline-suite.mjs && node scripts/test-cloudinary-storage-suite.mjs"
   },
   "dependencies": {
+    "cloudinary": "^2.11.0",
     "diff": "^9.0.0",
     "docx": "^9.8.1",
     "lucide-react": "^1.49.0",

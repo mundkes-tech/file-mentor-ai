@@ -16,6 +16,7 @@ import { diffWordsWithSpace, Change } from "diff";
 import mammoth from "mammoth";
 import { DocumentModel } from "@/models/Document";
 import { connectToDatabase } from "@/lib/mongodb";
+import { downloadDocumentFromCloudinary } from "@/lib/cloudinary";
 
 export interface RedlineSummary {
   originalName: string;
@@ -328,7 +329,20 @@ export const redlineService = {
       );
     }
 
-    // If storagePath exists, read from storagePath
+    // 1. If stored in Cloudinary, retrieve original binary buffer from Cloudinary
+    if (doc.cloudinaryPublicId || doc.cloudinarySecureUrl) {
+      try {
+        const buffer = await downloadDocumentFromCloudinary(
+          doc.cloudinaryPublicId || "",
+          doc.cloudinarySecureUrl
+        );
+        return { buffer, filename: doc.originalFilename };
+      } catch (err: any) {
+        console.warn(`Failed to download from Cloudinary, falling back: ${err?.message}`);
+      }
+    }
+
+    // 2. If storagePath exists on disk, read from storagePath
     if (doc.storagePath) {
       const fs = await import("fs");
       if (fs.existsSync(doc.storagePath)) {

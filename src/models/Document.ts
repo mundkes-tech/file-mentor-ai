@@ -15,7 +15,11 @@ export interface IDocument {
   fileType: "pdf" | "docx";
   mimeType: string;
   fileSize: number;
-  storagePath: string;
+  storagePath?: string;
+  cloudinaryPublicId?: string;
+  cloudinaryResourceType?: string;
+  cloudinaryFormat?: string;
+  cloudinarySecureUrl?: string;
   processingStatus: "uploading" | "processing" | "ready" | "failed";
   processingError?: string;
   extractedText: string;
@@ -50,7 +54,11 @@ const DocumentSchema = new Schema<IDocument>(
     fileType: { type: String, enum: ["pdf", "docx"], required: true },
     mimeType: { type: String, required: true },
     fileSize: { type: Number, required: true },
-    storagePath: { type: String, required: true },
+    storagePath: { type: String, required: false, default: "" },
+    cloudinaryPublicId: { type: String, index: true },
+    cloudinaryResourceType: { type: String, default: "raw" },
+    cloudinaryFormat: { type: String },
+    cloudinarySecureUrl: { type: String },
     processingStatus: {
       type: String,
       enum: ["uploading", "processing", "ready", "failed"],

@@ -115,8 +115,9 @@ flowchart TD
         RedlineService["redline-service (Word-Level Diff)"]
     end
 
-    subgraph DataStorage ["Persistence & External AI Layer"]
-        MongoAtlas[("MongoDB Atlas\n(Documents, Chunks, Chat Sessions)")]
+    subgraph DataStorage ["Persistence & External Cloud Layer"]
+        MongoAtlas[("MongoDB Atlas\n(Extracted Text, Pages, Chunks, Sessions)")]
+        CloudinaryStorage[("Cloudinary\n(Original PDF/DOCX Binaries)")]
         AIProvider["AI Provider\n(Configurable OpenAI-Compatible API)"]
     end
 
@@ -143,11 +144,13 @@ flowchart TD
     DocService --> ExtractorService
     DocService --> ChunkService
     DocService --> MongoAtlas
+    DocService --> CloudinaryStorage
     ContextService --> RetrievalService
     RetrievalService --> MongoAtlas
     AIService --> AIProvider
     VerifyService --> MongoAtlas
     RedlineService --> ExtractorService
+    RedlineService --> CloudinaryStorage
 ```
 
 ---
@@ -161,14 +164,18 @@ flowchart LR
     User([User / Legal Reviewer])
     System[FileMentor AI System]
     Atlas[(MongoDB Atlas)]
+    CloudinaryStorage[(Cloudinary Storage)]
     AIProvider[External AI Provider]
 
     User -- "1. PDF/DOCX Uploads\n2. Contract Questions\n3. Comparison Requests\n4. Redline Requests" --> System
     
     System -- "1. Streamed Answers\n2. Verified Citations\n3. Highlighted Passages\n4. Comparison Results\n5. Redlined DOCX" --> User
 
-    System -- "Stores Documents, Extracted Text,\nChunks, Chat History, Verification Data" --> Atlas
-    Atlas -- "Returns Stored Documents, Chunks,\nAuthoritative Text, Chat Sessions" --> System
+    System -- "Stores Extracted Text, Pages,\nChunks, Chat History, Verification Data" --> Atlas
+    Atlas -- "Returns Extracted Text, Chunks,\nAuthoritative Passages, Chat Sessions" --> System
+
+    System -- "Uploads Original PDF/DOCX Binaries\nDeletes On Document Removal" --> CloudinaryStorage
+    CloudinaryStorage -- "Downloads Original DOCX Binary For Redlines" --> System
 
     System -- "Sends Grounded Context + Question" --> AIProvider
     AIProvider -- "Streams Generated Answer + Candidate Quotes" --> System
@@ -413,6 +420,7 @@ Original DOCX  +  Updated DOCX
 | **Styling** | Tailwind CSS | `^4` | "Paper & Ink" custom theme and responsive layout styling |
 | **Iconography** | Lucide React | `^1.49.0` | Minimal legal-tech UI icons |
 | **Database** | MongoDB & Mongoose | `^9.10.3` | Document metadata, chunks, and chat history persistence |
+| **Document Binary Storage** | Cloudinary | `^2.11.0` | Cloud persistent storage of original PDF and DOCX binary files |
 | **PDF Extraction** | unpdf | `^1.7.0` | Server-side PDF text and page coordinate extraction |
 | **DOCX Extraction** | Mammoth | `^1.13.0` | OpenXML DOCX text extraction |
 | **DOCX Generation** | docx | `^9.8.1` | Programmatic OpenXML DOCX redline file generation |
@@ -513,6 +521,9 @@ MONGODB_URI=mongodb+srv://<user>:<password>@cluster0.mongodb.net/filementor-ai?r
 AI_API_KEY=your_api_key_here
 AI_BASE_URL=https://api.groq.com/openai/v1
 AI_MODEL=llama-3.3-70b-versatile
+CLOUDINARY_CLOUD_NAME=your_cloudinary_cloud_name
+CLOUDINARY_API_KEY=your_cloudinary_api_key
+CLOUDINARY_API_SECRET=your_cloudinary_api_secret
 ```
 
 > **Note**: Never commit `.env.local` or raw secrets to version control.
@@ -559,36 +570,43 @@ npm run build
 ### Recommended Architecture
 
 ```text
-GitHub
-   ↓
-Next.js Hosting (Vercel / Render / Docker)
-   ↓
-MongoDB Atlas (Database Layer)
-   ↓
-AI Provider (Groq / OpenAI / OpenRouter)
+User
+  ↓
+Next.js / Vercel
+  ├── Cloudinary → Original PDF/DOCX binaries (Persistent raw document storage)
+  ├── MongoDB Atlas → Extracted text, pages, chunks, metadata
+  └── AI Provider → Grounded answers
+             ↓
+       Quote Verification
 ```
 
 ### Production Environment Variables
 
-Configure the following variables in your hosting provider's dashboard:
+Configure the following 7 environment variables in your Vercel / hosting provider's dashboard:
 
 ```env
 MONGODB_URI=mongodb+srv://<user>:<password>@cluster0.mongodb.net/filementor-ai?retryWrites=true&w=majority
 AI_API_KEY=your_production_api_key
 AI_BASE_URL=https://api.groq.com/openai/v1
 AI_MODEL=llama-3.3-70b-versatile
+CLOUDINARY_CLOUD_NAME=your_cloudinary_cloud_name
+CLOUDINARY_API_KEY=your_cloudinary_api_key
+CLOUDINARY_API_SECRET=your_cloudinary_api_secret
 ```
 
 * The production database **MUST** use an authenticated MongoDB Atlas connection string (`mongodb+srv://...`).
 * The Atlas connection URI must never be hardcoded in application source files.
+* `CLOUDINARY_API_SECRET` must remain strictly server-side (never prefixed with `NEXT_PUBLIC_`).
 
-### Serverless `/uploads` Persistence Limitation
+### Vercel Serverless Storage Architecture (Cloudinary vs Local /uploads)
 
-* **Authoritative Persistence in MongoDB**: All extracted contract text, page maps, structured clause chunks, chat history, and verification data are persisted directly in **MongoDB Atlas**.
-* **Ephemeral Disk**: On serverless platforms (such as Vercel or AWS Lambda), the local filesystem (`/uploads`) is ephemeral. Uploaded original binaries do not persist across serverless function restarts.
-* **Operational Impact**: All core features—BM25 retrieval, quote verification, citation highlighting, multi-document comparison, and chat—operate exclusively against MongoDB and in-memory streams with **zero degradation**.
-* **Redline Operations**: Files uploaded through the Redline modal are processed in-memory. If redlining documents selected from the library when local disk files are absent, the redline engine reconstructs valid OpenXML structures from MongoDB `extractedText`.
-* **Persistent Storage Adapter**: For architectures requiring permanent binary file retention on serverless hosting, connect an S3 or Cloudflare R2 storage adapter in [`src/lib/storage.ts`](src/lib/storage.ts), or deploy via Docker with a mounted persistent volume.
+* **Elimination of Vercel ENOENT Errors**: Serverless hosting platforms (such as Vercel or AWS Lambda) run in ephemeral container environments where files written to local directories (e.g. `/var/task/uploads/`) do not persist across function invocations. FileMentor AI eliminates this vulnerability by uploading original PDF/DOCX binaries directly to **Cloudinary** as raw assets.
+* **Separation of Concerns**:
+  - **Cloudinary**: Stores persistent original document binaries under structured paths (`file-mentor-ai/documents/<documentId>/`).
+  - **MongoDB Atlas**: Stores authoritative extracted contract text, page boundaries, clause chunks, BM25 indices, chat sessions, and verification records.
+  - **Local `/uploads`**: Deprecated in production. Retained solely as a development-only fallback when offline.
+* **Redline Operations**: When generating tracked-change redlines comparing two contracts, the redline engine downloads the original DOCX binary directly from Cloudinary using stored asset references, eliminating all local disk dependencies.
+* **Cascading Deletion**: When a document is deleted via the API or UI, FileMentor AI safely deletes the asset from Cloudinary and cascades the deletion to MongoDB documents, chunks, and chat sessions.
 
 ---
 
@@ -615,12 +633,13 @@ The repository contains an end-to-end automated test suite covering all function
 npm run test:all
 
 # Or run individual phase suites:
-npm run test:phase3  # Single-doc chat, SSE, abort controller (24 tests)
-npm run test:phase4  # Deterministic quote verification engine (35 tests)
-npm run test:phase5  # Large-doc retrieval & 150-page acceptance (46 tests)
-npm run test:phase6  # Passage navigation & citation highlighting (47 tests)
-npm run test:phase7  # Multi-doc questions & contract comparison (42 tests)
-npm run test:phase8  # Part C tracked-change redlining (38 tests)
+npm run test:phase3      # Single-doc chat, SSE, abort controller (24 tests)
+npm run test:phase4      # Deterministic quote verification engine (35 tests)
+npm run test:phase5      # Large-doc retrieval & 150-page acceptance (46 tests)
+npm run test:phase6      # Passage navigation & citation highlighting (47 tests)
+npm run test:phase7      # Multi-doc questions & contract comparison (42 tests)
+npm run test:phase8      # Part C tracked-change redlining (38 tests)
+npm run test:cloudinary  # Cloudinary raw document storage, mock SDK & security audit (31 tests)
 ```
 
 ### Verified Baseline Results
@@ -633,7 +652,8 @@ npm run test:phase8  # Part C tracked-change redlining (38 tests)
 | **Phase 6** | Passage navigation, character offset mapping, citation highlighting | 47 / 47 | Passed |
 | **Phase 7** | Multi-document Q&A, cross-contract clause alignment & comparison | 42 / 42 | Passed |
 | **Phase 8** | Part C word-level diffing, OpenXML redline generation, download | 38 / 38 | Passed |
-| **Total** | **Comprehensive Regression Suite** | **232 / 232** | **100% Passed** |
+| **Cloudinary Storage** | Raw document upload, asset destroy, DOCX download & secret audit | 31 / 31 | Passed |
+| **Total** | **Comprehensive Regression Suite** | **263 / 263** | **100% Passed** |
 
 * **TypeScript Compilation**: `npx tsc --noEmit` exits with **0 errors**.
 * **Production Build**: `npm run build` exits with **code 0 (Successful build)**.
@@ -644,12 +664,13 @@ npm run test:phase8  # Part C tracked-change redlining (38 tests)
 
 - [x] **PDF/DOCX Upload**: Upload and validate supported document types with instant text extraction
 - [x] **Document Extraction**: Digital text extraction and page coordinate mapping (`unpdf`, `mammoth`)
+- [x] **Persistent Cloudinary Document Storage**: Raw document streaming to Cloudinary, eliminating Vercel local `/uploads` ENOENT failures
 - [x] **Document Library**: View, select, examine metadata, and delete contracts with cascading cleanup
 - [x] **AI Contract Q&A**: Grounded natural-language question answering against contract text
 - [x] **Streaming**: Real-time token streaming via Server-Sent Events (SSE)
 - [x] **Stop Generation**: Immediate stream cancellation preserving partial text in MongoDB history
 - [x] **Persistent Chat**: Isolated conversational history per document
-- [x] **Verified Quotes**: Algorithmic non-LLM verification testing quotes against authoritative document text
+- [x] **Deterministic Quote Verification**: Algorithmic non-LLM verification testing quotes against authoritative document text
 - [x] **Citation Highlighting**: Interactive citation badges auto-scrolling to the exact page and highlighting passage
 - [x] **Large Documents**: Structure-preserving chunking + BM25 lexical retrieval tested up to 150+ pages
 - [x] **Multi-Document Q&A**: Query multiple selected contracts simultaneously with source attribution
@@ -665,7 +686,7 @@ npm run test:phase8  # Part C tracked-change redlining (38 tests)
 1. **DOCX Logical Page Mapping**: Microsoft Word `.docx` files do not store fixed physical page numbers; pagination is computed dynamically by Word at display time based on system fonts, margins, and printer drivers. FileMentor AI calculates logical DOCX page boundaries using standardized 3,000-character paragraph segments.
 2. **Visual OpenXML Redline Styling (Part C)**: Revisions in redlined DOCX files are formatted visually using standard OpenXML `TextRun` properties (green underline for insertions, red strikethrough for deletions) rather than native Word `w:ins` / `w:del` XML markup. While visually authentic across all office suites, revisions do not appear in Word's native Reviewing pane.
 3. **BM25 Lexical Keyword Dependency**: Retrieval uses deterministic BM25 lexical ranking with heading weighting. Highly conceptual questions containing zero lexical overlap with contract terminology depend on matching section headings.
-4. **Serverless Local `/uploads` Persistence**: In serverless hosting environments (e.g., Vercel), files written to the local `/uploads` directory are ephemeral. While all document text, chunks, and chat data remain persistent in MongoDB Atlas, permanent original binary retention requires containerized hosting or an external object storage bucket (e.g., S3/R2).
+4. **Cloudinary Cloud Name Matching**: Cloudinary storage requires the exact Cloud Name matching the account credentials (configured via `CLOUDINARY_CLOUD_NAME`). In local development and automated testing, an automatic fallback to local disk storage is provided if Cloudinary is temporarily unreachable or unconfigured. On Vercel, Cloudinary storage is strictly enforced.
 
 ---
 

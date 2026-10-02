@@ -8,6 +8,11 @@ import {
   generateStoredFileName,
   getStoredFilePath,
 } from "@/lib/storage";
+import {
+  isCloudinaryConfigured,
+  uploadDocumentToCloudinary,
+  deleteDocumentFromCloudinary,
+} from "@/lib/cloudinary";
 import { ALLOWED_EXTENSIONS, MAX_FILE_SIZE_BYTES } from "@/lib/constants";
 import { chunkingService } from "./chunking-service";
 import fs from "fs/promises";
@@ -22,6 +27,10 @@ function mapDocToMetadata(doc: any): DocumentMetadata {
     fileSize: doc.fileSize,
     sizeBytes: doc.fileSize,
     storagePath: doc.storagePath,
+    cloudinaryPublicId: doc.cloudinaryPublicId,
+    cloudinaryResourceType: doc.cloudinaryResourceType,
+    cloudinaryFormat: doc.cloudinaryFormat,
+    cloudinarySecureUrl: doc.cloudinarySecureUrl,
     pageCount: doc.pageCount || 1,
     status: doc.processingStatus,
     processingStatus: doc.processingStatus,
@@ -110,15 +119,10 @@ export const documentService = {
       throw new Error("The uploaded file is empty (0 bytes).");
     }
 
-    // 2. Save original file safely to uploads/
-    await ensureUploadsDirectory();
+    // 2. Persistent Storage
     const docId = `doc_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
-    const storedFileName = generateStoredFileName(file.name, docId);
-    const destinationPath = getStoredFilePath(storedFileName);
-
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
-    await fs.writeFile(destinationPath, buffer);
 
     const fileType = isPdf ? "pdf" : "docx";
     const mimeType =
@@ -126,6 +130,55 @@ export const documentService = {
       (isPdf
         ? "application/pdf"
         : "application/vnd.openxmlformats-officedocument.wordprocessingml.document");
+
+    let destinationPath = "";
+    let cloudinaryMeta: {
+      publicId: string;
+      secureUrl: string;
+      bytes: number;
+      format: string;
+      resourceType: "raw";
+    } | null = null;
+
+    const isVercel =
+      process.env.VERCEL === "1" ||
+      Boolean(process.env.VERCEL_ENV);
+
+    if (isCloudinaryConfigured()) {
+      try {
+        cloudinaryMeta = await uploadDocumentToCloudinary(buffer, {
+          filename: file.name,
+          documentId: docId,
+          mimeType,
+        });
+      } catch (err: any) {
+        if (isVercel) {
+          // On Vercel, local /uploads is prohibited as it causes ENOENT
+          throw err;
+        }
+        // In local development/test, fall back to local disk if Cloudinary fails
+        console.warn(
+          `[Dev Storage Fallback] Cloudinary upload failed (${err?.message}), falling back to local disk storage.`
+        );
+        await ensureUploadsDirectory();
+        const storedFileName = generateStoredFileName(file.name, docId);
+        destinationPath = getStoredFilePath(storedFileName);
+        await fs.writeFile(destinationPath, buffer);
+      }
+    } else {
+      // On Vercel, local /uploads is prohibited
+      if (isVercel) {
+        throw new Error(
+          "Cloudinary storage is required in Vercel production deployment but environment variables are missing."
+        );
+      }
+
+      // Local development fallback
+      await ensureUploadsDirectory();
+      const storedFileName = generateStoredFileName(file.name, docId);
+      destinationPath = getStoredFilePath(storedFileName);
+      await fs.writeFile(destinationPath, buffer);
+    }
 
     // 3. Create database document record with status = 'processing'
     const docRecord = await DocumentModel.create({
@@ -136,6 +189,10 @@ export const documentService = {
       mimeType,
       fileSize: file.size,
       storagePath: destinationPath,
+      cloudinaryPublicId: cloudinaryMeta?.publicId,
+      cloudinaryResourceType: cloudinaryMeta?.resourceType,
+      cloudinaryFormat: cloudinaryMeta?.format,
+      cloudinarySecureUrl: cloudinaryMeta?.secureUrl,
       processingStatus: "processing",
       extractedText: "",
       textLength: 0,
@@ -196,7 +253,16 @@ export const documentService = {
       return false;
     }
 
-    // Safely remove file on disk
+    // Safely remove file on Cloudinary
+    if (doc.cloudinaryPublicId) {
+      try {
+        await deleteDocumentFromCloudinary(doc.cloudinaryPublicId);
+      } catch (err: any) {
+        console.error("Cloudinary deletion handled safely:", err?.message || "Unknown error");
+      }
+    }
+
+    // Safely remove file on disk if local path exists
     if (doc.storagePath) {
       try {
         await fs.unlink(doc.storagePath);

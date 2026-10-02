@@ -42,6 +42,10 @@ export interface DocumentMetadata {
   fileSize?: number;
   sizeBytes: number; // Alias for backward compatibility in UI
   storagePath?: string;
+  cloudinaryPublicId?: string;
+  cloudinaryResourceType?: string;
+  cloudinaryFormat?: string;
+  cloudinarySecureUrl?: string;
   pageCount: number;
   status: DocumentStatus;
   processingStatus?: DocumentStatus;
