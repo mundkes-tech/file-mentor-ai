@@ -13,9 +13,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "LexiGuard AI | Legal Contract Analysis AI",
+  title: "FileMentor AI | Document Intelligence with Verified Sources",
   description:
-    "Enterprise legal contract intelligence platform with verified quote attribution, clause risk analysis, and multi-document inspection.",
+    "AI-powered document intelligence with verified sources. Deterministic quote verification, clause risk analysis, multi-document intelligence, and contract redlining.",
 };
 
 export default function RootLayout({

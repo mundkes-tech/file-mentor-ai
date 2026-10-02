@@ -269,7 +269,7 @@ export function AppShell() {
             <div className="relative w-full max-w-md h-full bg-white dark:bg-slate-950 shadow-xl z-50 flex flex-col">
               <div className="flex items-center justify-between p-3 border-b border-slate-200 dark:border-slate-800">
                 <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                  Contract AI Copilot
+                  FileMentor AI Copilot
                 </span>
                 <button
                   onClick={() => setIsMobileChatOpen(false)}

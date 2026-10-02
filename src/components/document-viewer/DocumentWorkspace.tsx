@@ -123,7 +123,7 @@ export function DocumentWorkspace({
               "Unable to extract readable text from this PDF. It may be a scanned/image-only document."}
           </p>
           <p className="text-xs text-[#6B6B67] mt-3 leading-relaxed">
-            LexiGuard AI requires digital text-based contracts for deterministic quote verification and clause indexing.
+            FileMentor AI requires digital text-based contracts for deterministic quote verification and clause indexing.
           </p>
 
           <div className="flex items-center gap-3 mt-6">

@@ -63,7 +63,7 @@ export const aiService = {
       ? `RETRIEVAL COVERAGE: PARTIAL (${retrievedCount} of ${totalCount} sections retrieved)`
       : `RETRIEVAL COVERAGE: COMPLETE (Full document provided)`;
 
-    return `You are LexiGuard AI, a professional legal contract analysis assistant.
+    return `You are FileMentor AI, a professional legal contract analysis assistant.
 You are analyzing the uploaded contract: "${documentName}".
 ${coverageHeader}
 
@@ -124,7 +124,7 @@ ${contextText}
      "I could not find sufficient relevant information in the retrieved sections of [Document Name]."`
         : `5. If requested information is absent from any document, state clearly that the document does not contain sufficient information to answer that question.`;
 
-    return `You are LexiGuard AI, a professional legal contract analysis assistant.
+    return `You are FileMentor AI, a professional legal contract analysis assistant.
 You are analyzing ${documents.length} independent legal contracts simultaneously:
 ${docSummaries}
 

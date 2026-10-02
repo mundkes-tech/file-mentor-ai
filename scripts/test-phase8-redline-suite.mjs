@@ -60,7 +60,7 @@ function getFileHash(filePath) {
 
 async function runPhase8TestSuite() {
   console.log("================================================================================");
-  console.log("LEXIGUARD AI — PHASE 8 AUTOMATED TEST SUITE: TRACKED-CHANGE REDLINING");
+  console.log("FILEMENTOR AI — PHASE 8 AUTOMATED TEST SUITE: TRACKED-CHANGE REDLINING");
   console.log("================================================================================");
   console.log(`Base URL: ${BASE_URL}\n`);
 
