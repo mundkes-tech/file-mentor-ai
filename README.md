@@ -45,21 +45,7 @@ FileMentor AI solves this problem by separating AI generation from deterministic
 
 ---
 
-## 4. Screenshots
-
-> **Note**: Demonstration screenshots are organized in [`docs/screenshots/`](docs/screenshots/). If running the project for the first time, refer to the [Screenshot Capture Guide](docs/screenshots/README.md) for the exact visual states to capture.
-
-| Interface View | Screenshot Asset |
-| :--- | :--- |
-| **1. Document Upload & Processing** | ![Document Upload](docs/screenshots/01-upload.png) |
-| **2. Chat with Verified Quotes** | ![Chat with Verified Quotes](docs/screenshots/02-chat-verified-quote.png) |
-| **3. Citation Highlighting** | ![Citation Highlighting](docs/screenshots/03-citation-highlighting.png) |
-| **4. Contract Comparison** | ![Contract Comparison](docs/screenshots/04-document-comparison.png) |
-| **5. Tracked-Change Redlining (Part C)** | ![DOCX Redline](docs/screenshots/05-redline.png) |
-
----
-
-## 5. User Flow
+## 4. User Flow
 
 ```mermaid
 flowchart TD
@@ -81,7 +67,7 @@ flowchart TD
 
 ---
 
-## 6. System Architecture
+## 5. System Architecture
 
 ```mermaid
 flowchart TD
@@ -155,7 +141,7 @@ flowchart TD
 
 ---
 
-## 7. Data Flow Diagrams (DFD)
+## 6. Data Flow Diagrams (DFD)
 
 ### DFD Level 0 — Context Diagram
 
@@ -287,7 +273,7 @@ sequenceDiagram
 
 ---
 
-## 8. Quote Verification Architecture
+## 7. Quote Verification Architecture
 
 The quote verification engine is the foundational compliance mechanism of FileMentor AI. It enforces an algorithmic proof check that does not rely on Large Language Model claims.
 
@@ -330,7 +316,7 @@ FileMentor AI **disregards all page numbers, line numbers, and offsets generated
 
 ---
 
-## 9. Large Document Strategy
+## 8. Large Document Strategy
 
 Processing agreements of 150+ pages (such as enterprise Master Services Agreements spanning 300,000+ characters) presents severe technical challenges: context window overflow, prohibitive latency, degraded reasoning focus, and high token costs.
 
@@ -347,7 +333,7 @@ FileMentor AI handles large documents using a structured, bounded retrieval pipe
 
 ---
 
-## 10. Multi-Document Architecture
+## 9. Multi-Document Architecture
 
 FileMentor AI allows users to select multiple contracts concurrently from the Document Library to perform cross-document intelligence:
 
@@ -359,7 +345,7 @@ FileMentor AI allows users to select multiple contracts concurrently from the Do
 
 ---
 
-## 11. Contract Comparison
+## 10. Contract Comparison
 
 The contract comparison feature allows users to select two documents and review an automated clause-by-clause comparative analysis:
 
@@ -372,7 +358,7 @@ The contract comparison feature allows users to select two documents and review 
 
 ---
 
-## 12. Part C — Redlining
+## 11. Part C — Redlining
 
 **Selected Option**: **Part C — Option 1: Tracked-Change Redlining**
 
@@ -410,7 +396,7 @@ Original DOCX  +  Updated DOCX
 
 ---
 
-## 13. Tech Stack
+## 12. Tech Stack
 
 | Layer | Technology | Version | Purpose |
 | :--- | :--- | :--- | :--- |
@@ -430,18 +416,10 @@ Original DOCX  +  Updated DOCX
 
 ---
 
-## 14. Project Structure
+## 13. Project Structure
 
 ```text
 FileMentor-AI/
-├── docs/
-│   └── screenshots/                   # Demonstration screenshots and capture guide
-│       ├── 01-upload.png
-│       ├── 02-chat-verified-quote.png
-│       ├── 03-citation-highlighting.png
-│       ├── 04-document-comparison.png
-│       ├── 05-redline.png
-│       └── README.md
 ├── public/                            # Static assets
 ├── scripts/                           # Maintained test suites & benchmark generators
 │   ├── generate-test-contracts.mjs    # Generates benchmark contracts (MSA, 150-page enterprise)
@@ -489,7 +467,7 @@ FileMentor-AI/
 
 ---
 
-## 15. Local Setup
+## 14. Local Setup
 
 ### Requirements
 
@@ -565,7 +543,7 @@ npm run build
 
 ---
 
-## 16. Production Deployment
+## 15. Production Deployment
 
 ### Recommended Architecture
 
@@ -610,7 +588,7 @@ CLOUDINARY_API_SECRET=your_cloudinary_api_secret
 
 ---
 
-## 17. Security
+## 16. Security
 
 * **Environment-Based Secrets**: All API keys and database credentials are read server-side via environment variables. Zero client-side `NEXT_PUBLIC_` exposures.
 * **No Client-Side AI API Key Exposure**: AI completions and streaming pass through the server-side `/api/chat` route handler. Clients never touch external AI credentials.
@@ -622,7 +600,7 @@ CLOUDINARY_API_SECRET=your_cloudinary_api_secret
 
 ---
 
-## 18. Testing
+## 17. Testing
 
 The repository contains an end-to-end automated test suite covering all functional phases:
 
@@ -660,7 +638,7 @@ npm run test:cloudinary  # Cloudinary raw document storage, mock SDK & security 
 
 ---
 
-## 19. What Is Finished
+## 18. What Is Finished
 
 - [x] **PDF/DOCX Upload**: Upload and validate supported document types with instant text extraction
 - [x] **Document Extraction**: Digital text extraction and page coordinate mapping (`unpdf`, `mammoth`)
@@ -681,7 +659,7 @@ npm run test:cloudinary  # Cloudinary raw document storage, mock SDK & security 
 
 ---
 
-## 20. Known Limitations
+## 19. Known Limitations
 
 1. **DOCX Logical Page Mapping**: Microsoft Word `.docx` files do not store fixed physical page numbers; pagination is computed dynamically by Word at display time based on system fonts, margins, and printer drivers. FileMentor AI calculates logical DOCX page boundaries using standardized 3,000-character paragraph segments.
 2. **Visual OpenXML Redline Styling (Part C)**: Revisions in redlined DOCX files are formatted visually using standard OpenXML `TextRun` properties (green underline for insertions, red strikethrough for deletions) rather than native Word `w:ins` / `w:del` XML markup. While visually authentic across all office suites, revisions do not appear in Word's native Reviewing pane.
@@ -690,7 +668,7 @@ npm run test:cloudinary  # Cloudinary raw document storage, mock SDK & security 
 
 ---
 
-## 21. Assignment Deliverables
+## 20. Assignment Deliverables
 
 ### Submission
 
@@ -700,7 +678,7 @@ npm run test:cloudinary  # Cloudinary raw document storage, mock SDK & security 
 
 ---
 
-## 22. Demo Flow (3–5 Minute Walkthrough)
+## 21. Demo Flow (3–5 Minute Walkthrough)
 
 Follow this structured workflow for an end-to-end evaluation demonstration:
 
@@ -719,7 +697,7 @@ Follow this structured workflow for an end-to-end evaluation demonstration:
 
 ---
 
-## 23. Half-Page Technical Note
+## 22. Half-Page Technical Note
 
 ### 1. How Quote Verification Works and Where It Could Fail
 * **Mechanism**: Quote verification is strictly deterministic and non-probabilistic. When the AI emits a candidate quote, the engine normalizes the string by collapsing irregular whitespace (tabs, newlines, multi-spaces) and standardizing directional smart quotes (`“”‘’`) and dashes (`—–`). It then performs an exact substring search against the authoritative, full-length document text stored in MongoDB. Upon finding a match, the engine computes the raw start and end character offsets and compares them against the document's precomputed page boundary array to resolve the true page number.
